@@ -9,13 +9,13 @@ class VisualGridHuntGame:
     def __init__(self, width=10, height=10, num_food=10, num_opponents=2, custom_walls=None):
         self.width = width
         self.height = height
-        self.agent_pos = [0, 0]  # Starting position (x, y)
+        self.agent_pos = [6, 6]  # Starting position (x, y)
 
         if custom_walls is not None:
             self.walls = set(custom_walls)
         else:
             # Generate some default scattered walls for a larger grid
-            self.walls = {(2, 2), (2, 3), (5, 5), (6, 5), (3, 7)}
+            self.walls = {(2, 2), (2, 3), (5,5),(5, 4), (6, 4),(7,4),(7,5), (3, 7)}
 
         # Dynamically generate random food positions avoiding walls and agent start
         self.food_positions = set()
@@ -51,16 +51,28 @@ class VisualGridHuntGame:
         self.steps = 0
         self.collision = False
 
-    def get_percept(self) -> dict:
+    def get_percept(self):
+        x, y = self.agent_pos
+
+        # Cell directly above the agent
+        ahead = (x, y + 1)
+
+        # Check if the next cell is outside the grid
+        if y + 1 >= self.height:
+            wall_ahead = True
+
+        # Check if there is a wall there
+        elif ahead in self.walls:
+            wall_ahead = True
+
+        else:
+            wall_ahead = False
+
+        food_here = (x, y) in self.food_positions
+
         return {
-            'agent_pos': list(self.agent_pos),
-            'opponent_positions': [list(op) for op in self.opponents],
-            'smells_food': tuple(self.agent_pos) in self.food_positions,
-            'smells_toxin': tuple(self.agent_pos) in self.toxic_traps,  # Step 2.2: Perception Subsystem update
-            'hit_wall': tuple(self.agent_pos) in self.walls,
-            'collision': self.collision,
-            'score': self.score,
-            'remaining_food': len(self.food_positions)
+            "wall_ahead": wall_ahead,
+            "food_here": food_here
         }
 
     def execute_action(self, action: str):
