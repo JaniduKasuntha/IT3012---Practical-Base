@@ -1,6 +1,7 @@
 # visual_grid_game.py
 import random
 import tkinter as tk
+from agent import SimpleReflexAgent,GreedyGridAgent,ModelBasedAgent
 
 
 class VisualGridHuntGame:
@@ -125,6 +126,7 @@ class GridGameGUI:
     """Tkinter wrapper that dynamically scales cell sizes to keep larger grids on screen."""
 
     def __init__(self, root, width=10, height=10, num_food=12, num_opponents=2, walls=None):
+        self.agent = ModelBasedAgent()
         self.root = root
         self.root.title("IT3012 - Scalable Multi-Agent Grid Hunt")
 
@@ -202,7 +204,8 @@ class GridGameGUI:
 
         def step():
             if not self.env.is_done():
-                action = random.choice(['Up', 'Down', 'Left', 'Right'])
+                percept = self.env.get_percept()
+                action = self.agent.sense_and_act(percept)
                 self.env.execute_action(action)
 
                 self.draw_grid()
