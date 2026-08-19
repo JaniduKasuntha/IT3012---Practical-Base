@@ -1,7 +1,7 @@
 # visual_grid_game.py
 import random
 import tkinter as tk
-from agent import SimpleReflexAgent,GreedyGridAgent,ModelBasedAgent
+from agent import SimpleReflexAgent, GreedyGridAgent, ModelBasedAgent, SearchAgent
 
 
 class VisualGridHuntGame:
@@ -77,7 +77,8 @@ class VisualGridHuntGame:
             "grid_size": (self.width, self.height),
             "walls": list(self.walls),
             "all_food": list(self.food_positions),
-            "toxic_traps": list(self.toxic_traps)
+            "toxic_traps": list(self.toxic_traps),
+            "agent_pos": list(self.agent_pos)
         }
 
     def execute_action(self, action: str):
@@ -129,8 +130,8 @@ class VisualGridHuntGame:
 class GridGameGUI:
     """Tkinter wrapper that dynamically scales cell sizes to keep larger grids on screen."""
 
-    def __init__(self, root, width=10, height=10, num_food=12, num_opponents=2, walls=None):
-        self.agent = ModelBasedAgent()
+    def __init__(self, root, width=10, height=10, num_food=12, num_opponents=2, walls=None, agent=None):
+        self.agent = agent if agent is not None else SearchAgent()
         self.root = root
         self.root.title("IT3012 - Scalable Multi-Agent Grid Hunt")
 
