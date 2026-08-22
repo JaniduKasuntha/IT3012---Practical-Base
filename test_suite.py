@@ -104,8 +104,38 @@ class TestPractical3_SearchAgent(unittest.TestCase):
         is_empty_or_none = (path is None) or (len(path) == 0)
         self.assertTrue(is_empty_or_none, "BFS should return None or [] when the goal is unreachable.")
 
+    def test_heuristic_distances(self):
+        """Test 5: Manhattan and Euclidean distance heuristics."""
+        pos = (1, 2)
+        goal = (4, 6)
+        # Manhattan: |1-4| + |2-6| = 3 + 4 = 7
+        m_dist = self.search_agent.manhattan_distance(pos, goal)
+        self.assertEqual(m_dist, 7, f"Expected Manhattan distance 7, got {m_dist}")
+        self.assertIsInstance(m_dist, int, "Manhattan distance must return an integer.")
+
+        # Euclidean: sqrt((1-4)^2 + (2-6)^2) = sqrt(9 + 16) = 5.0
+        e_dist = self.search_agent.euclidean_distance(pos, goal)
+        self.assertAlmostEqual(e_dist, 5.0, places=5, msg=f"Expected Euclidean distance 5.0, got {e_dist}")
+
+    def test_astar_search(self):
+        """Test 6: A* Search finds the optimal path with both heuristics."""
+        grid_size = (4, 4)
+        start_pos = (0, 0)
+        goal_pos = (3, 3)
+        walls = [(1, 0), (2, 0), (0, 2), (1, 2), (2, 2)]
+
+        # Test Manhattan heuristic
+        path_m = self.search_agent.astar_search(start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan')
+        self.assertIsNotNone(path_m, "A* (Manhattan) returned None.")
+        self.assertEqual(len(path_m), 6, f"Expected 6 steps for optimal path, got {len(path_m)}")
+
+        # Test Euclidean heuristic
+        path_e = self.search_agent.astar_search(start_pos, goal_pos, walls, grid_size, heuristic_type='euclidean')
+        self.assertIsNotNone(path_e, "A* (Euclidean) returned None.")
+        self.assertEqual(len(path_e), 6, f"Expected 6 steps for optimal path, got {len(path_e)}")
+
 
 if __name__ == '__main__':
     # Run the test suite
     print("=== IT3012: Intelligent Agents - Autograder Test Suite ===\n")
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2)

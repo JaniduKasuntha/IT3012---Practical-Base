@@ -87,9 +87,9 @@ class ModelBasedAgent:
 class SearchAgent:
     """A problem-solving agent that uses search algorithms to find paths in a grid."""
 
-    def __init__(self):
+    def __init__(self, active_algo='AStar'):
         self.plan = []
-        self.active_algo = 'BFS'
+        self.active_algo = active_algo
         self.x = 0
         self.y = 0
         self.last_action = None
@@ -110,7 +110,7 @@ class SearchAgent:
             current_pos = (self.x, self.y)
 
         if not self.plan:
-            food_list = percept.get('all_food', [])
+            food_list = percept.get('all_food') or percept.get('food_positions') or []
             if not food_list:
                 return 'Stay'
 
@@ -129,6 +129,8 @@ class SearchAgent:
                 actions = self.dfs_search(current_pos, closest_food, walls, grid_size)
             elif self.active_algo == 'UCS':
                 actions = self.ucs_search(current_pos, closest_food, walls, grid_size)
+            elif self.active_algo == 'AStar' or self.active_algo == 'A*':
+                actions = self.astar_search(current_pos, closest_food, walls, grid_size)
             else:
                 actions = self.bfs_search(current_pos, closest_food, walls, grid_size)
 
@@ -141,6 +143,7 @@ class SearchAgent:
             return action
 
         return 'Stay'
+
 
 
     def _get_neighbors(self, state, walls, grid_size):
@@ -259,7 +262,81 @@ class SearchAgent:
                     heapq.heappush(pq, (cost + step_cost, counter, neighbor, path + [action]))
 
         return None
-    
-        def manhattan_distance(self, pos, goal):
 
-        def euclidean_distance(self, pos, goal):    
+    def manhattan_distance(self, pos, goal):
+        """Calculates Manhattan distance h(n) = |x1 - x2| + |y1 - y2|."""
+        return int(abs(pos[0] - goal[0]) + abs(pos[1] - goal[1]))
+
+    def euclidean_distance(self, pos, goal):
+        """Calculates Euclidean distance h(n) = sqrt((x1 - x2)^2 + (y1 - y2)^2)."""
+        return math.sqrt((pos[0] - goal[0])**2 + (pos[1] - goal[1])**2)
+
+    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan'):
+        """A* Search algorithm using a Priority Queue (heapq).
+
+        Tuple format: (f_cost, g_cost, current_pos, path_taken)
+        """
+        start = tuple(start_pos)
+        goal = tuple(goal_pos)
+
+        if start == goal:
+            return []
+
+        def calc_h(pos):
+            if heuristic_type == 'euclidean':
+                return self.euclidean_distance(pos, goal)
+            return self.manhattan_distance(pos, goal)
+
+        pq = []
+        reached_states = set()
+
+        g_start = 0
+        h_start = calc_h(start)
+        f_start = g_start + h_start
+
+        heapq.heappush(pq, (f_start, g_start, start, []))
+
+        while pq:
+            f_cost, g_cost, current_pos, path_taken = heapq.heappop(pq)
+
+            if current_pos == goal:
+                return path_taken
+
+            if current_pos in reached_states:
+                continue
+
+            reached_states.add(current_pos)
+
+            for action, neighbor in self._get_neighbors(current_pos, walls, grid_size):
+                if neighbor not in reached_states:
+                    g_new = g_cost + 1
+                    h_new = calc_h(neighbor)
+                    f_new = g_new + h_new
+                    heapq.heappush(pq, (f_new, g_new, neighbor, path_taken + [action]))
+
+        return None
+
+
+if __name__ == '__main__':
+    agent = SearchAgent()
+    start_pos = (0, 0)
+    goal_pos = (3, 4)
+
+    manhattan_res = agent.manhattan_distance(start_pos, goal_pos)
+    euclidean_res = agent.euclidean_distance(start_pos, goal_pos)
+
+    print("=== Testing Checkpoint ===")
+    print(f"Start: {start_pos}, Goal: {goal_pos}")
+    print(f"Manhattan Distance: {manhattan_res}")
+    print(f"Euclidean Distance: {euclidean_res}")
+
+    grid_size = (4, 4)
+    walls = [(1, 0), (2, 0), (0, 2), (1, 2), (2, 2)]
+    start = (0, 0)
+    goal = (3, 3)
+    path_m = agent.astar_search(start, goal, walls, grid_size, heuristic_type='manhattan')
+    path_e = agent.astar_search(start, goal, walls, grid_size, heuristic_type='euclidean')
+    print("\n=== A* Search Checkpoint ===")
+    print(f"A* (Manhattan) Path: {path_m}")
+    print(f"A* (Euclidean) Path: {path_e}")
+
