@@ -2,6 +2,7 @@
 import random
 from collections import deque
 import heapq
+import math
 
 class GreedyGridAgent:
     """A simple agent that tries to move around systematically to clear the grid."""
@@ -257,4 +258,8 @@ class SearchAgent:
                     counter += 1
                     heapq.heappush(pq, (cost + step_cost, counter, neighbor, path + [action]))
 
-        return None
+        return None
+    
+        def manhattan_distance(self, pos, goal):
+
+        def euclidean_distance(self, pos, goal):    
