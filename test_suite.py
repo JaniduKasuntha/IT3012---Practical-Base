@@ -135,7 +135,87 @@ class TestPractical3_SearchAgent(unittest.TestCase):
         self.assertEqual(len(path_e), 6, f"Expected 6 steps for optimal path, got {len(path_e)}")
 
 
+class TestKnowledgeBase(unittest.TestCase):
+    """
+    Tests for Step 1.1: Knowledge Base and Forward Chaining logic engine.
+    """
+
+    def test_knowledge_base_forward_chaining(self):
+        from logic_engine import KnowledgeBase
+        kb = KnowledgeBase()
+        
+        kb.tell_rule(["HasVision", "EnemySpotted"], "ThreatDetected")
+        kb.tell_rule(["ThreatDetected", "LowHealth"], "RetreatNeeded")
+        
+        kb.tell_fact("HasVision")
+        kb.tell_fact("EnemySpotted")
+        kb.tell_fact("LowHealth")
+        
+        kb.forward_chain()
+        
+        self.assertTrue(kb.ask("ThreatDetected"), "Forward chaining failed to infer 'ThreatDetected'.")
+        self.assertTrue(kb.ask("RetreatNeeded"), "Forward chaining failed to infer 'RetreatNeeded'.")
+        self.assertFalse(kb.ask("UnknownFact"), "KnowledgeBase incorrectly contains un-entailed fact.")
+
+    def test_clear_facts(self):
+        from logic_engine import KnowledgeBase
+        kb = KnowledgeBase()
+        kb.tell_fact("Fact1")
+        kb.clear_facts()
+        self.assertEqual(len(kb.facts), 0, "clear_facts() did not empty the facts set.")
+
+    def test_agent_kb_rules(self):
+        from agent import SearchAgent
+        agent = SearchAgent()
+        
+        # Test Rule 1: TargetVisible ∧ HasDust ⇒ SafeToEngage
+        agent.kb.tell_fact("TargetVisible")
+        agent.kb.tell_fact("HasDust")
+        agent.kb.forward_chain()
+        self.assertTrue(agent.kb.ask("SafeToEngage"), "SafeToEngage rule failed.")
+
+        # Test Rule 2: SafeToEngage ∧ BloodseekerMissing ⇒ Retreat
+        agent.kb.tell_fact("BloodseekerMissing")
+        agent.kb.forward_chain()
+        self.assertTrue(agent.kb.ask("Retreat"), "Retreat rule failed.")
+
+    def test_astar_kb_feasibility(self):
+        from agent import SearchAgent
+        agent = SearchAgent()
+        
+        grid_size = (3, 3)
+        start = (0, 0)
+        goal = (2, 0)
+        walls = []
+
+        # Tile (1, 0) is physically open, but logically infeasible due to Retreat percepts
+        tile_percepts = {
+            (1, 0): ['TargetVisible', 'HasDust', 'BloodseekerMissing']
+        }
+
+        path = agent.astar_search(start, goal, walls, grid_size, tile_percepts=tile_percepts)
+        # Agent should avoid (1, 0) and route around via (0, 1) -> (1, 1) -> (2, 1) -> (2, 0)
+        self.assertIsNotNone(path, "A* failed to find path around infeasible tile.")
+        
+        # Compute visited positions along the path
+        curr = list(start)
+        visited_coords = []
+        for move in path:
+            if move == 'Up': curr[1] += 1
+            elif move == 'Down': curr[1] -= 1
+            elif move == 'Left': curr[0] -= 1
+            elif move == 'Right': curr[0] += 1
+            visited_coords.append(tuple(curr))
+
+        self.assertNotIn((1, 0), visited_coords, "Tile (1,0) should be avoided by A* path.")
+        self.assertEqual(len(path), 4, f"Expected detour path of length 4, got {len(path)}: {path}")
+
+
+
+
+
 if __name__ == '__main__':
     # Run the test suite
     print("=== IT3012: Intelligent Agents - Autograder Test Suite ===\n")
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2)
+

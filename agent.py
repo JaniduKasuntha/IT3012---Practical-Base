@@ -3,6 +3,7 @@ import random
 from collections import deque
 import heapq
 import math
+from logic_engine import KnowledgeBase
 
 class GreedyGridAgent:
     """A simple agent that tries to move around systematically to clear the grid."""
@@ -93,6 +94,14 @@ class SearchAgent:
         self.x = 0
         self.y = 0
         self.last_action = None
+        self.kb = KnowledgeBase()
+        
+        # Step 3.1 Rules:
+        # Rule 1: TargetVisible ∧ HasDust ⇒ SafeToEngage
+        self.kb.tell_rule(["TargetVisible", "HasDust"], "SafeToEngage")
+        # Rule 2: SafeToEngage ∧ BloodseekerMissing ⇒ Retreat
+        self.kb.tell_rule(["SafeToEngage", "BloodseekerMissing"], "Retreat")
+
 
     def sense_and_act(self, percept: dict) -> str:
         if "agent_pos" in percept:
@@ -271,7 +280,40 @@ class SearchAgent:
         """Calculates Euclidean distance h(n) = sqrt((x1 - x2)^2 + (y1 - y2)^2)."""
         return math.sqrt((pos[0] - goal[0])**2 + (pos[1] - goal[1])**2)
 
-    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan'):
+    def is_tile_feasible(self, tile_pos, tile_percepts=None) -> bool:
+        """
+        Consults the Knowledge Base to check if a tile is logically Feasible before expanding.
+        Clears KB facts, feeds percepts for tile_pos into KB, runs forward chaining.
+        Returns False (Infeasible) if 'Retreat' is derived in KB facts; True otherwise.
+        """
+        if not hasattr(self, 'kb') or self.kb is None:
+            return True
+
+        self.kb.clear_facts()
+
+        if tile_percepts:
+            if isinstance(tile_percepts, dict) and tile_pos in tile_percepts:
+                facts = tile_percepts[tile_pos]
+                if isinstance(facts, (list, tuple, set)):
+                    for fact in facts:
+                        self.kb.tell_fact(fact)
+                elif isinstance(facts, str):
+                    self.kb.tell_fact(facts)
+            elif callable(tile_percepts):
+                facts = tile_percepts(tile_pos)
+                if isinstance(facts, (list, tuple, set)):
+                    for fact in facts:
+                        self.kb.tell_fact(fact)
+
+        self.kb.forward_chain()
+
+        # If 'Retreat' is deduced and exists in self.kb.facts, mark tile as Infeasible
+        if 'Retreat' in self.kb.facts or self.kb.ask('Retreat'):
+            return False
+
+        return True
+
+    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan', tile_percepts=None):
         """A* Search algorithm using a Priority Queue (heapq).
 
         Tuple format: (f_cost, g_cost, current_pos, path_taken)
@@ -309,12 +351,17 @@ class SearchAgent:
 
             for action, neighbor in self._get_neighbors(current_pos, walls, grid_size):
                 if neighbor not in reached_states:
+                    # Step 3.2: Consult KB facts and forward chaining to validate feasibility
+                    if not self.is_tile_feasible(neighbor, tile_percepts):
+                        continue  # Skip infeasible tile even if physically reachable
+
                     g_new = g_cost + 1
                     h_new = calc_h(neighbor)
                     f_new = g_new + h_new
                     heapq.heappush(pq, (f_new, g_new, neighbor, path_taken + [action]))
 
         return None
+
 
 
 if __name__ == '__main__':
